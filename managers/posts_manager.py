@@ -1,11 +1,12 @@
 from abc import abstractmethod, ABC
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from managers.database_manager import DatabaseManager
 from managers.sqlalchemy_manager import get_db
 from models.bal.schemas import PostCreateRequest, PostUpdateRequest
-from models.dal.models import Post as ORMPost
+from models.dal.models import Post as ORMPost, Post
 
 
 class PostsManager(ABC):
@@ -13,7 +14,7 @@ class PostsManager(ABC):
         pass
 
     @abstractmethod
-    def get_posts(self):
+    def get_posts(self, *args):
         pass
 
     @abstractmethod
@@ -21,20 +22,20 @@ class PostsManager(ABC):
         pass
 
     @abstractmethod
-    def create_post(self, post: PostCreateRequest):
+    def create_post(self, post: PostCreateRequest, current_user_id: int):
         pass
 
     @abstractmethod
-    def delete_post(self, post_id):
+    def delete_post(self, post_id, current_user_id: int):
         pass
 
     @abstractmethod
-    def update_post(self, post_id, post: PostUpdateRequest):
+    def update_post(self, post_id, post: PostUpdateRequest, current_user_id: int):
         pass
 
 
 class PostsManagerFactory:
-    def __call__(self, use_orm=True):
+    def __call__(self, use_orm=True, *args, **kwargs):
         if use_orm:
             return PostsManagerWithORM()
         else:
@@ -43,47 +44,64 @@ class PostsManagerFactory:
 
 class PostsManagerWithORM(PostsManager):
 
-    def get_posts(self):
+    def get_posts(self, limit, skip, search):
         db: Session = get_db()
-        posts = db.query(ORMPost).all()
+        posts = db.query(ORMPost).filter(Post.title.contains(search)).limit(limit).offset(skip).all()
         return posts
 
     def get_post(self, post_id):
         db: Session = get_db()
         post = db.query(ORMPost).filter_by(id=post_id).first()
         # post = db.query(ORMPost).filter(ORMPost.id == int(post_id)).first()
+        if post is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"post with id {post_id} doesn't exist")
         return post
 
-    def create_post(self, post: PostCreateRequest):
+    def create_post(self, post: PostCreateRequest, current_user_id: int):
         db: Session = get_db()
         # This ** is just unpacking the dict which will work
         # because both the pydantic modal and the orm model
         # have the same keys and values for those classes
         # This way we don't have to manually type in all the keys
-        new_post = ORMPost(**post.dict())
+        new_post = ORMPost(owner_id=current_user_id, **post.dict())
         db.add(new_post)
         db.commit()
         db.refresh(new_post)
         return new_post
 
-    def delete_post(self, post_id):
+    def delete_post(self, post_id, current_user_id):
         db: Session = get_db()
-        post = db.query(ORMPost).filter_by(id=post_id)
-        deleted_post = post.first()
-        if deleted_post is not None:
-            post.delete(synchronize_session=False)
-            db.commit()
-        return deleted_post
+        post_query = db.query(ORMPost).filter_by(id=post_id)
+        post = post_query.first()
+        if post is not None:
+            if post.owner_id == current_user_id:
+                post_query.delete(synchronize_session=False)
+                db.commit()
+                return post
+            else:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                    detail="Forbidden operation.")
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"post with id {post_id} could not be found")
 
-    def update_post(self, post_id, post: PostUpdateRequest):
+    def update_post(self, post_id, post: PostUpdateRequest, current_user_id: int):
         db: Session = get_db()
         post_query = db.query(ORMPost).filter_by(id=post_id)
         post_to_update = post_query.first()
         if post_to_update is not None:
-            post_query.update(post.dict(), synchronize_session=False)
-            db.commit()
-            db.refresh(post_to_update)
-        return post_to_update
+            if post_to_update.owner_id == current_user_id:
+                post_query.update(post.dict(), synchronize_session=False)
+                db.commit()
+                db.refresh(post_to_update)
+                return post_to_update
+            else:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                    detail="Forbidden operation.")
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"post with id {post_id} could not be found")
 
 
 class PostsManagerWithoutORM(PostsManager):

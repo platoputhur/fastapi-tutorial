@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import users, posts
+from app.routers import users, posts, auth
 from managers.sqlalchemy_manager import engine
 from models.dal.models import Base
 
@@ -13,6 +13,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI()
 app.include_router(posts.router)
 app.include_router(users.router)
+app.include_router(auth.router)
 
 
 # function name doesn't matter

@@ -5,12 +5,16 @@ from fastapi import HTTPException, status, APIRouter
 from managers.users_manager import UsersManagerFactory
 from models.bal.schemas import UserResponse, UserCreateRequest
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/users",
+    tags=['Users']
+)
+
 users_factory = UsersManagerFactory()
 users_manager = users_factory()
 
 
-@router.post("/users", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 def create_user(new_user: UserCreateRequest):
     user = users_manager.create_user(new_user)
     if user is None:
@@ -19,13 +23,13 @@ def create_user(new_user: UserCreateRequest):
         return user
 
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/", response_model=List[UserResponse])
 def get_users():
     users = users_manager.get_users()
     return users
 
 
-@router.get("/users/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=UserResponse)
 def get_user(user_id: int):
     user = users_manager.get_user(user_id)
     if user is None:
