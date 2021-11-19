@@ -12,15 +12,16 @@ from app.routers import users, posts, auth, votes
 
 app = FastAPI()
 # List of domains from which we have to enable cors requests
-origins = ['*']
+origins = ["*"]
 # List of methods like post, get etc in which we have to enable cors requests
 methods = ['*']
-app.add_middleware(CORSMiddleware,
-                   allow_origin=origins,
-                   allow_credentials=True,
-                   allow_methods=methods,
-                   allow_headers=["*"]
-                   )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(posts.router)
 app.include_router(users.router)
 app.include_router(auth.router)
