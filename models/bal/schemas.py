@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 
 
 # Users
@@ -47,6 +47,11 @@ class PostResponse(PostBase):
     owner: UserResponse
 
 
+class PostWithVotesResponse(BaseModel):
+    Post: PostResponse
+    votes: int
+
+
 # Authentication
 class AuthBase(BaseModel):
     class Config:
@@ -68,3 +73,18 @@ class UserAuthenticationResponse(BaseModel):
 
 class TokenData(BaseModel):
     id: Optional[str] = None
+
+
+class Vote(BaseModel):
+    post_id: int
+
+
+class VoteRequest(Vote):
+    dir: int
+
+    @validator('dir')
+    def validate_vote(cls, val):
+        if val != 0 and val != 1:
+            raise ValueError('Invalid vote')
+        else:
+            return val

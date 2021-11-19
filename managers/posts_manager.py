@@ -1,12 +1,13 @@
 from abc import abstractmethod, ABC
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from managers.database_manager import DatabaseManager
 from managers.sqlalchemy_manager import get_db
 from models.bal.schemas import PostCreateRequest, PostUpdateRequest
-from models.dal.models import Post as ORMPost, Post
+from models.dal.models import Post, Vote
 
 
 class PostsManager(ABC):
@@ -46,13 +47,19 @@ class PostsManagerWithORM(PostsManager):
 
     def get_posts(self, limit, skip, search):
         db: Session = get_db()
-        posts = db.query(ORMPost).filter(Post.title.contains(search)).limit(limit).offset(skip).all()
-        return posts
+        # posts = db.query(Post).filter(Post.title.contains(search)).limit(limit).offset(skip).all()
+        results = db.query(Post, func.count(Vote.post_id).label("votes")).join(Vote, Vote.post_id == Post.id,
+                                                                               isouter=True).group_by(
+            Post.id).all()
+        return results
 
     def get_post(self, post_id):
         db: Session = get_db()
-        post = db.query(ORMPost).filter_by(id=post_id).first()
-        # post = db.query(ORMPost).filter(ORMPost.id == int(post_id)).first()
+        post = db.query(Post, func.count(Vote.post_id).label("votes")).join(Vote, Vote.post_id == Post.id,
+                                                                            isouter=True).group_by(
+            Post.id).filter(Post.id == post_id).first()
+        print(post)
+        # post = db.query(Post).filter(Post.id == int(post_id)).first()
         if post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"post with id {post_id} doesn't exist")
@@ -64,7 +71,7 @@ class PostsManagerWithORM(PostsManager):
         # because both the pydantic modal and the orm model
         # have the same keys and values for those classes
         # This way we don't have to manually type in all the keys
-        new_post = ORMPost(owner_id=current_user_id, **post.dict())
+        new_post = Post(owner_id=current_user_id, **post.dict())
         db.add(new_post)
         db.commit()
         db.refresh(new_post)
@@ -72,7 +79,7 @@ class PostsManagerWithORM(PostsManager):
 
     def delete_post(self, post_id, current_user_id):
         db: Session = get_db()
-        post_query = db.query(ORMPost).filter_by(id=post_id)
+        post_query = db.query(Post).filter_by(id=post_id)
         post = post_query.first()
         if post is not None:
             if post.owner_id == current_user_id:
@@ -88,7 +95,7 @@ class PostsManagerWithORM(PostsManager):
 
     def update_post(self, post_id, post: PostUpdateRequest, current_user_id: int):
         db: Session = get_db()
-        post_query = db.query(ORMPost).filter_by(id=post_id)
+        post_query = db.query(Post).filter_by(id=post_id)
         post_to_update = post_query.first()
         if post_to_update is not None:
             if post_to_update.owner_id == current_user_id:

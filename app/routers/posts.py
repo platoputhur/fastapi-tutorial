@@ -4,7 +4,7 @@ from fastapi import status, Response, APIRouter, Depends
 
 from managers.auth_manager import verify_token_and_get_current_user
 from managers.posts_manager import PostsManagerFactory
-from models.bal.schemas import PostResponse, PostCreateRequest, PostUpdateRequest, UserResponse
+from models.bal.schemas import PostResponse, PostCreateRequest, PostUpdateRequest, UserResponse, PostWithVotesResponse
 
 posts_factory = PostsManagerFactory()
 posts_manager = posts_factory()
@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[PostResponse])
+@router.get("/", response_model=List[PostWithVotesResponse])
 def get_posts(current_user: UserResponse = Depends(verify_token_and_get_current_user), limit: int = 10, skip: int = 0,
               search: str = ""):
     posts = posts_manager.get_posts(limit, skip, search)
@@ -29,7 +29,7 @@ def create_posts(new_post: PostCreateRequest, current_user: UserResponse = Depen
     return post
 
 
-@router.get("/{post_id}", response_model=PostResponse)
+@router.get("/{post_id}", response_model=PostWithVotesResponse)
 def get_post(post_id: int, current_user: UserResponse = Depends(verify_token_and_get_current_user)):
     # post = next((item for item in my_posts if item['id'] == post_id), None)
     post = posts_manager.get_post(post_id)
