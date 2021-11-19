@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 
-from managers.sqlalchemy_manager import get_db
 from models.dal.models import Vote, Post
 
 
@@ -18,12 +16,11 @@ class VotesManager(ABC):
         return VotesManagerWithORM()
 
     @abstractmethod
-    def vote(self, vote_dir: int, post_id: int, user_id: int): pass
+    def vote(self, vote_dir: int, post_id: int, user_id: int, db): pass
 
 
 class VotesManagerWithORM(VotesManager):
-    def vote(self, vote_dir: str, post_id: int, user_id: int):
-        db: Session = get_db()
+    def vote(self, vote_dir: str, post_id: int, user_id: int, db):
         votes_query = db.query(Vote).filter(Vote.post_id == post_id, Vote.user_id == user_id)
         found_vote = votes_query.first()
         if int(vote_dir) == 1:

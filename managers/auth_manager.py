@@ -18,13 +18,12 @@ class AuthManagerFactory:
 
 class AuthManager(ABC):
     @abstractmethod
-    def authenticate(self, user: UserAuthenticationRequest): pass
+    def authenticate(self, user: UserAuthenticationRequest, db): pass
 
 
 class AuthManagerWithORM(AuthManager):
 
-    def authenticate(self, user_credentials: UserAuthenticationRequest):
-        db: Session = get_db()
+    def authenticate(self, user_credentials: UserAuthenticationRequest, db):
         user_from_db = db.query(User).filter_by(email=user_credentials.username).first()
         if not user_from_db:
             return user_from_db

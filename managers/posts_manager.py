@@ -2,10 +2,8 @@ from abc import abstractmethod, ABC
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
-from sqlalchemy.orm import Session
 
 from managers.database_manager import DatabaseManager
-from managers.sqlalchemy_manager import get_db
 from models.bal.schemas import PostCreateRequest, PostUpdateRequest
 from models.dal.models import Post, Vote
 
@@ -19,19 +17,19 @@ class PostsManager(ABC):
         pass
 
     @abstractmethod
-    def get_post(self, post_id):
+    def get_post(self, post_id, db):
         pass
 
     @abstractmethod
-    def create_post(self, post: PostCreateRequest, current_user_id: int):
+    def create_post(self, post: PostCreateRequest, current_user_id: int, db):
         pass
 
     @abstractmethod
-    def delete_post(self, post_id, current_user_id: int):
+    def delete_post(self, post_id, current_user_id: int, db):
         pass
 
     @abstractmethod
-    def update_post(self, post_id, post: PostUpdateRequest, current_user_id: int):
+    def update_post(self, post_id, post: PostUpdateRequest, current_user_id: int, db):
         pass
 
 
@@ -45,16 +43,14 @@ class PostsManagerFactory:
 
 class PostsManagerWithORM(PostsManager):
 
-    def get_posts(self, limit, skip, search):
-        db: Session = get_db()
+    def get_posts(self, limit, skip, search, db):
         # posts = db.query(Post).filter(Post.title.contains(search)).limit(limit).offset(skip).all()
         results = db.query(Post, func.count(Vote.post_id).label("votes")).join(Vote, Vote.post_id == Post.id,
                                                                                isouter=True).group_by(
-            Post.id).all()
+            Post.id).filter(Post.title.contains(search)).limit(limit).offset(skip).all()
         return results
 
-    def get_post(self, post_id):
-        db: Session = get_db()
+    def get_post(self, post_id, db):
         post = db.query(Post, func.count(Vote.post_id).label("votes")).join(Vote, Vote.post_id == Post.id,
                                                                             isouter=True).group_by(
             Post.id).filter(Post.id == post_id).first()
@@ -65,8 +61,7 @@ class PostsManagerWithORM(PostsManager):
                                 detail=f"post with id {post_id} doesn't exist")
         return post
 
-    def create_post(self, post: PostCreateRequest, current_user_id: int):
-        db: Session = get_db()
+    def create_post(self, post: PostCreateRequest, current_user_id: int, db):
         # This ** is just unpacking the dict which will work
         # because both the pydantic modal and the orm model
         # have the same keys and values for those classes
@@ -77,8 +72,7 @@ class PostsManagerWithORM(PostsManager):
         db.refresh(new_post)
         return new_post
 
-    def delete_post(self, post_id, current_user_id):
-        db: Session = get_db()
+    def delete_post(self, post_id, current_user_id, db):
         post_query = db.query(Post).filter_by(id=post_id)
         post = post_query.first()
         if post is not None:
@@ -93,8 +87,7 @@ class PostsManagerWithORM(PostsManager):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"post with id {post_id} could not be found")
 
-    def update_post(self, post_id, post: PostUpdateRequest, current_user_id: int):
-        db: Session = get_db()
+    def update_post(self, post_id, post: PostUpdateRequest, current_user_id: int, db):
         post_query = db.query(Post).filter_by(id=post_id)
         post_to_update = post_query.first()
         if post_to_update is not None:
@@ -120,22 +113,22 @@ class PostsManagerWithoutORM(PostsManager):
         posts = self.db_manager.execute_query("select * from posts")
         return posts
 
-    def get_post(self, post_id):
+    def get_post(self, post_id, db):
         post = self.db_manager.execute_query("SELECT * FROM posts WHERE id='%s'", (post_id,), single_record_flag=True)
         return post
 
-    def create_post(self, post: PostCreateRequest):
+    def create_post(self, post: PostCreateRequest, current_user_id: int, db):
         post = self.db_manager.execute_query("INSERT INTO posts (title, content) VALUES (%s, %s) RETURNING *",
                                              (post.title, post.content), single_record_flag=True)
 
         return post
 
-    def delete_post(self, post_id):
+    def delete_post(self, post_id, current_user_id, db):
         post = self.db_manager.execute_query("DELETE FROM posts WHERE id = %s RETURNING *", (post_id,),
                                              single_record_flag=True)
         return post
 
-    def update_post(self, post_id, post: PostUpdateRequest):
+    def update_post(self, post_id, post: PostUpdateRequest, current_user_id, db):
         post = self.db_manager.execute_query(
             "UPDATE posts SET title = %s, content = %s, published = %s WHERE id= %s RETURNING *",
             (post.title, post.content, post.published, post_id),

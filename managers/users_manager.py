@@ -1,9 +1,6 @@
 from abc import abstractmethod, ABC
 
-from sqlalchemy.orm import Session
-
 from helpers.auth_utils import hash_password
-from managers.sqlalchemy_manager import get_db
 from models.bal.schemas import UserCreateRequest
 from models.dal.models import User
 
@@ -21,30 +18,29 @@ class UsersManager(ABC):
         pass
 
     @abstractmethod
-    def create_user(self, user: UserCreateRequest):
+    def create_user(self, user: UserCreateRequest, db):
         pass
 
     @abstractmethod
-    def get_user(self, user_id):
+    def get_user(self, user_id, db):
         pass
 
     @abstractmethod
-    def get_users(self):
+    def get_users(self, db):
         pass
 
     @abstractmethod
-    def update_user(self):
+    def update_user(self, db):
         pass
 
     @abstractmethod
-    def delete_user(self):
+    def delete_user(self, db):
         pass
 
 
 class UsersManagerWithORM(UsersManager):
 
-    def create_user(self, user: UserCreateRequest):
-        db: Session = get_db()
+    def create_user(self, user: UserCreateRequest, db):
         user.password = hash_password(user.password)
         new_user = User(**user.dict())
         db.add(new_user)
@@ -52,18 +48,16 @@ class UsersManagerWithORM(UsersManager):
         db.refresh(new_user)
         return new_user
 
-    def get_user(self, user_id):
-        db: Session = get_db()
+    def get_user(self, user_id, db):
         user = db.query(User).filter_by(id=user_id).first()
         return user
 
-    def get_users(self):
-        db: Session = get_db()
+    def get_users(self, db):
         users = db.query(User).all()
         return users
 
-    def update_user(self):
+    def update_user(self, db):
         pass
 
-    def delete_user(self):
+    def delete_user(self, db):
         pass
