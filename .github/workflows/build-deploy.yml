@@ -6,6 +6,11 @@ on:
 
 jobs:
   job1:
+    env:
+      SQLALCHEMY_DB_URL=postgresql://postgres@127.0.0.1/fastapi
+      AUTH_SECRET=2f9d4b9326d6c29c18377877281c9d5cc58aff29a431d851cb9a0f211d60f779
+      AUTH_ALGORITHM=HS256
+      AUTH_EXPIRY_IN_MINUTES=60
     runs-on: ubuntu-latest
     steps:
       - name: pulling git repo
