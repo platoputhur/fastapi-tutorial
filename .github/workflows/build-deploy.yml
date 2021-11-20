@@ -6,11 +6,13 @@ on:
 
 jobs:
   job1:
+    environment:
+      name: testing
     env:
-      SQLALCHEMY_DB_URL: ${{settings.SQLALCHEMY_DB_URL}}
-      AUTH_SECRET: ${{settings.AUTH_SECRET}}
-      AUTH_ALGORITHM: ${{settings.AUTH_ALGORITHM}}
-      AUTH_EXPIRY_IN_MINUTES: ${{settings.AUTH_EXPIRY_IN_MINUTES}}
+      SQLALCHEMY_DB_URL: ${{secrets.SQLALCHEMY_DB_URL}}
+      AUTH_SECRET: ${{secrets.AUTH_SECRET}}
+      AUTH_ALGORITHM: ${{secrets.AUTH_ALGORITHM}}
+      AUTH_EXPIRY_IN_MINUTES: ${{secrets.AUTH_EXPIRY_IN_MINUTES}}
     runs-on: ubuntu-latest
     steps:
       - name: pulling git repo
