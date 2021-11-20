@@ -13,6 +13,7 @@ jobs:
       AUTH_SECRET: ${{secrets.AUTH_SECRET}}
       AUTH_ALGORITHM: ${{secrets.AUTH_ALGORITHM}}
       AUTH_EXPIRY_IN_MINUTES: ${{secrets.AUTH_EXPIRY_IN_MINUTES}}
+      
     services:
       postgres:
         image: postgres
@@ -26,6 +27,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     runs-on: ubuntu-latest
     steps:
       - name: pulling git repo
