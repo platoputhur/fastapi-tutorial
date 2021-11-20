@@ -54,7 +54,6 @@ class PostsManagerWithORM(PostsManager):
         post = db.query(Post, func.count(Vote.post_id).label("votes")).join(Vote, Vote.post_id == Post.id,
                                                                             isouter=True).group_by(
             Post.id).filter(Post.id == post_id).first()
-        print(post)
         # post = db.query(Post).filter(Post.id == int(post_id)).first()
         if post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,

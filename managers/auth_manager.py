@@ -26,18 +26,19 @@ class AuthManagerWithORM(AuthManager):
     def authenticate(self, user_credentials: UserAuthenticationRequest, db):
         user_from_db = db.query(User).filter_by(email=user_credentials.username).first()
         if not user_from_db:
-            return user_from_db
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials.")
         if verify_password(user_credentials.password, user_from_db.password):
             access_token = create_access_token(data={"user_id": user_from_db.id})
             return {"access_token": access_token, "token_type": "bearer"}
         else:
-            return None
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials.",
+                                headers={"WWW_Authenticate": "Bearer"})
 
 
-def verify_token_and_get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.",
+def verify_token_and_get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials.",
                                           headers={"WWW_Authenticate": "Bearer"})
     user_id = verify_access_token(token, credentials_exception)
-    db: Session = get_db()
+
     user = db.query(User).filter_by(id=user_id).first()
     return user

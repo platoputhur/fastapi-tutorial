@@ -17,7 +17,4 @@ def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Session =
     # We are using OAuth2PasswordRequestForm to follow the oauth2 spec which says we have to use
     # username and password keys in the dict sent for user auth. It can't be anything else.
     token = auth_manager.authenticate(user_credentials, db)
-    if token is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
-    else:
-        return token
+    return token

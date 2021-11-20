@@ -19,7 +19,7 @@ router = APIRouter(
 
 @router.get("/", response_model=List[PostWithVotesResponse])
 def get_posts(current_user: UserResponse = Depends(verify_token_and_get_current_user), limit: int = 10, skip: int = 0,
-              search: Optional[str] = None, db: Session = Depends(get_db)):
+              search: Optional[str] = "", db: Session = Depends(get_db)):
     posts = posts_manager.get_posts(limit, skip, search, db)
     return posts
 
